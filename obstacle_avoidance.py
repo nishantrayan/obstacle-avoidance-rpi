@@ -24,9 +24,6 @@ enas = []
 for ena_pin in [MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2]:
     enas.append(gpio.PWM(ena_pin, 100))
 
-for ena_pin in enas:
-    ena_pin.start(70)
-
 def detect_obstacle():
     max_confidence = 1
     confidence = max_confidence
@@ -83,6 +80,7 @@ def backup():
 while True:
     forward()    
     detect_obstacle()
+    time.sleep(2)
     stop()
     time.sleep(0.5)
     backup()
