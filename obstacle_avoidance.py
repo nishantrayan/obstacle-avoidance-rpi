@@ -5,6 +5,7 @@ gpio.setwarnings(False)
 gpio.setmode(gpio.BOARD)
 ##setup variables for pins
 IR_LEFT = 12
+IR_RIGHT = 26
 MOTOR_MOVE_IN1 = 13
 MOTOR_MOVE_IN2 = 15
 MOTOR_MOVE_ENA1 = 7
@@ -16,8 +17,12 @@ MOTOR_DIR_IN2 = 24
 
 FORWARD_SPEED = 60
 BACKWARD_SPEED = 100
+IR_PINS = [IR_LEFT, IR_RIGHT]
+
 ##setup inputs and outputs
-gpio.setup(IR_LEFT, gpio.IN)
+for ir_pin in IR_PINS:
+    gpio.setup(ir_pin, gpio.IN)
+    
 for out_pin in [MOTOR_MOVE_IN1, MOTOR_MOVE_IN2, MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2, MOTOR_DIR_IN1, MOTOR_DIR_IN2, MOTOR_DIR_ENA1, MOTOR_DIR_ENA2]:
     gpio.setup(out_pin, gpio.OUT)
 enas = []
@@ -28,15 +33,21 @@ def detect_obstacle():
     max_confidence = 1
     confidence = max_confidence
     while True:
-        ir_left_in = gpio.input(IR_LEFT)
-        if ir_left_in == 0:
+        detected = False
+        for ir_pin in IR_PINS:
+            ir_value = gpio.input(ir_pin)
+            if ir_value == 0:
+                detected = True
+            time.sleep(0.1)    
+            
+        if detected:
             print "Detected"
             print confidence
             confidence = confidence - 1
             if confidence == 0:
-              return True
+                return True
         else:
-            print "No obstacle. Yay! Proceeding with confidence"
+            print "All clear"
             confidence = max_confidence
         time.sleep(0.1)    
             
