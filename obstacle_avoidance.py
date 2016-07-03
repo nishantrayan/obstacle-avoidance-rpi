@@ -80,7 +80,6 @@ def backup():
 while True:
     forward()    
     detect_obstacle()
-    time.sleep(2)
     stop()
     time.sleep(0.5)
     backup()
