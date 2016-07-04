@@ -6,8 +6,10 @@ gpio.setmode(gpio.BOARD)
 ##setup variables for pins
 IR_LEFT = 12
 IR_RIGHT = 26
-MOTOR_MOVE_IN1 = 13
-MOTOR_MOVE_IN2 = 15
+IR_BOTTOM_LEFT = 29
+IR_BOTTOM_RIGHT = 32
+MOTOR_MOVE_IN1 = 15
+MOTOR_MOVE_IN2 = 13
 MOTOR_MOVE_ENA1 = 7
 MOTOR_MOVE_ENA2 = 11
 MOTOR_DIR_ENA1 = 16
@@ -17,7 +19,7 @@ MOTOR_DIR_IN2 = 24
 
 FORWARD_SPEED = 60
 BACKWARD_SPEED = 100
-IR_PINS = [IR_LEFT, IR_RIGHT]
+IR_PINS = [IR_LEFT, IR_RIGHT, IR_BOTTOM_LEFT, IR_BOTTOM_RIGHT]
 
 ##setup inputs and outputs
 for ir_pin in IR_PINS:
@@ -34,15 +36,18 @@ def detect_obstacle():
     confidence = max_confidence
     while True:
         detected = False
+        detected_by = 1
         for ir_pin in IR_PINS:
             ir_value = gpio.input(ir_pin)
             if ir_value == 0:
                 detected = True
-            time.sleep(0.1)    
+                detected_by = ir_pin
+            time.sleep(0.05)    
             
         if detected:
             print "Detected"
             print confidence
+            print detected_by
             confidence = confidence - 1
             if confidence == 0:
                 return True
