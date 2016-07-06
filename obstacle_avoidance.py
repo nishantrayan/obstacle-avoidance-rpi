@@ -1,5 +1,6 @@
 import RPi.GPIO as gpio
 import time
+## Upgrading to RPi 3 B model
 
 gpio.setwarnings(False)
 gpio.setmode(gpio.BOARD)
