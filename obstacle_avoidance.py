@@ -19,6 +19,7 @@ MOTOR_DIR_IN2 = 24
 
 FORWARD_SPEED = 75
 BACKWARD_SPEED = 100
+OBSTACLE_DISTANCE_CM = 15
 for out_pin in [MOTOR_MOVE_IN1, MOTOR_MOVE_IN2, MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2, MOTOR_DIR_IN1, MOTOR_DIR_IN2, MOTOR_DIR_ENA1, MOTOR_DIR_ENA2]:
     gpio.setup(out_pin, gpio.OUT)
     
@@ -45,8 +46,8 @@ def detect_obstacle():
             pass
         stop = time.time()
         distance_cm = (stop - start) * 17000
-        if distance_cm <= 10:
-            print "Object detected"
+        if distance_cm <= OBSTACLE_DISTANCE_CM:
+            print "Object detected", time.time()
             return
             
 
@@ -81,8 +82,6 @@ def backup():
     gpio.output(MOTOR_DIR_IN1, True)
     gpio.output(MOTOR_DIR_IN2, False)
     time.sleep(1)
-    gpio.output(MOTOR_DIR_IN1, False)
-    gpio.output(MOTOR_DIR_IN2, False)
     for ena_pin in enas:
         ena_pin.start(BACKWARD_SPEED)
     gpio.output(MOTOR_MOVE_IN1, True)
