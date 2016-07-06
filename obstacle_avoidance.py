@@ -5,10 +5,9 @@ import time
 gpio.setwarnings(False)
 gpio.setmode(gpio.BOARD)
 ##setup variables for pins
-IR_LEFT = 12
-IR_RIGHT = 26
-IR_BOTTOM_LEFT = 29
-IR_BOTTOM_RIGHT = 32
+ULTRASONIC_TRIG = 26
+ULTRASONIC_ECHO = 29
+
 MOTOR_MOVE_IN1 = 15
 MOTOR_MOVE_IN2 = 13
 MOTOR_MOVE_ENA1 = 7
@@ -18,44 +17,37 @@ MOTOR_DIR_ENA2 = 18
 MOTOR_DIR_IN1 = 22
 MOTOR_DIR_IN2 = 24
 
-FORWARD_SPEED = 60
+FORWARD_SPEED = 75
 BACKWARD_SPEED = 100
-IR_PINS = [IR_LEFT, IR_RIGHT, IR_BOTTOM_LEFT, IR_BOTTOM_RIGHT]
-
-##setup inputs and outputs
-for ir_pin in IR_PINS:
-    gpio.setup(ir_pin, gpio.IN)
-    
 for out_pin in [MOTOR_MOVE_IN1, MOTOR_MOVE_IN2, MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2, MOTOR_DIR_IN1, MOTOR_DIR_IN2, MOTOR_DIR_ENA1, MOTOR_DIR_ENA2]:
     gpio.setup(out_pin, gpio.OUT)
+    
+gpio.setup(ULTRASONIC_TRIG, gpio.OUT)
+gpio.output(ULTRASONIC_TRIG, False)
+gpio.setup(ULTRASONIC_ECHO, gpio.IN)
+
 enas = []
 for ena_pin in [MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2]:
     enas.append(gpio.PWM(ena_pin, 100))
 
+
+
 def detect_obstacle():
-    max_confidence = 1
-    confidence = max_confidence
     while True:
-        detected = False
-        detected_by = 1
-        for ir_pin in IR_PINS:
-            ir_value = gpio.input(ir_pin)
-            if ir_value == 0:
-                detected = True
-                detected_by = ir_pin
-            time.sleep(0.05)    
-            
-        if detected:
-            print "Detected"
-            print confidence
-            print detected_by
-            confidence = confidence - 1
-            if confidence == 0:
-                return True
-        else:
-            print "All clear"
-            confidence = max_confidence
-        time.sleep(0.1)    
+        time.sleep(0.1)
+        gpio.output(ULTRASONIC_TRIG, True)
+        time.sleep(0.00001)
+        gpio.output(ULTRASONIC_TRIG, False)
+        while gpio.input(ULTRASONIC_ECHO) == 0:
+            pass
+        start = time.time()
+        while gpio.input(ULTRASONIC_ECHO) == 1:
+            pass
+        stop = time.time()
+        distance_cm = (stop - start) * 17000
+        if distance_cm <= 10:
+            print "Object detected"
+            return
             
 
 def forward():
@@ -88,18 +80,24 @@ def backup():
     gpio.output(MOTOR_MOVE_ENA2, True)
     gpio.output(MOTOR_DIR_IN1, True)
     gpio.output(MOTOR_DIR_IN2, False)
-    time.sleep(0.5)
+    time.sleep(1)
+    gpio.output(MOTOR_DIR_IN1, False)
+    gpio.output(MOTOR_DIR_IN2, False)
     for ena_pin in enas:
         ena_pin.start(BACKWARD_SPEED)
     gpio.output(MOTOR_MOVE_IN1, True)
     gpio.output(MOTOR_MOVE_IN2, False)
-    
-while True:
-    forward()    
-    detect_obstacle()
-    stop()
-    time.sleep(0.5)
-    backup()
-    time.sleep(2)
-    stop()
-    time.sleep(0.5)
+
+try:    
+    while True:
+        forward()    
+        detect_obstacle()
+        stop()
+        time.sleep(0.5)
+        backup()
+        time.sleep(2)
+        stop()
+        time.sleep(0.5)
+except KeyboardInterrupt:
+        print "Cleaning up"
+        gpio.cleanup()
