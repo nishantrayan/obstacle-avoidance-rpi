@@ -5,8 +5,10 @@ import time
 gpio.setwarnings(False)
 gpio.setmode(gpio.BOARD)
 ##setup variables for pins
-ULTRASONIC_TRIG = 26
-ULTRASONIC_ECHO = 29
+ULTRASONIC_TRIG_RIGHT = 26
+ULTRASONIC_ECHO_RIGHT = 29
+ULTRASONIC_TRIG_LEFT = 31
+ULTRASONIC_ECHO_LEFT = 32
 
 MOTOR_MOVE_IN1 = 15
 MOTOR_MOVE_IN2 = 13
@@ -17,15 +19,20 @@ MOTOR_DIR_ENA2 = 18
 MOTOR_DIR_IN1 = 22
 MOTOR_DIR_IN2 = 24
 
-FORWARD_SPEED = 75
+FORWARD_SPEED = 65
 BACKWARD_SPEED = 100
-OBSTACLE_DISTANCE_CM = 15
+OBSTACLE_DISTANCE_CM = 10
 for out_pin in [MOTOR_MOVE_IN1, MOTOR_MOVE_IN2, MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2, MOTOR_DIR_IN1, MOTOR_DIR_IN2, MOTOR_DIR_ENA1, MOTOR_DIR_ENA2]:
     gpio.setup(out_pin, gpio.OUT)
-    
-gpio.setup(ULTRASONIC_TRIG, gpio.OUT)
-gpio.output(ULTRASONIC_TRIG, False)
-gpio.setup(ULTRASONIC_ECHO, gpio.IN)
+
+ULTRASONIC_TRIG_PINS = [ULTRASONIC_TRIG_LEFT]
+ULTRASONIC_ECHO_PINS = [ULTRASONIC_ECHO_LEFT]
+for trig_pin in ULTRASONIC_TRIG_PINS:
+    gpio.setup(trig_pin, gpio.OUT)
+    gpio.output(trig_pin, False)
+
+for echo_pin in ULTRASONIC_ECHO_PINS:    
+    gpio.setup(echo_pin, gpio.IN)
 
 enas = []
 for ena_pin in [MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2]:
@@ -35,20 +42,25 @@ for ena_pin in [MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2]:
 
 def detect_obstacle():
     while True:
-        time.sleep(0.1)
-        gpio.output(ULTRASONIC_TRIG, True)
-        time.sleep(0.00001)
-        gpio.output(ULTRASONIC_TRIG, False)
-        while gpio.input(ULTRASONIC_ECHO) == 0:
-            pass
-        start = time.time()
-        while gpio.input(ULTRASONIC_ECHO) == 1:
-            pass
-        stop = time.time()
-        distance_cm = (stop - start) * 17000
-        if distance_cm <= OBSTACLE_DISTANCE_CM:
-            print "Object detected", time.time()
-            return
+        for idx, trig_pin in enumerate(ULTRASONIC_TRIG_PINS):
+            echo_pin = ULTRASONIC_ECHO_PINS[idx]
+            print "Pins:", trig_pin, echo_pin
+            time.sleep(0.1)
+            gpio.output(trig_pin, True)
+            time.sleep(0.00001)
+            gpio.output(trig_pin, False)
+            print "Triggered"
+            while gpio.input(echo_pin) == 0:
+                pass
+            start = time.time()
+            while gpio.input(echo_pin) == 1:
+                pass
+            stop = time.time()
+            distance_cm = (stop - start) * 17000
+            print "Distance by", idx, distance_cm
+            if distance_cm <= OBSTACLE_DISTANCE_CM:
+                print "Object detected by", idx, "at", time.time()
+                return
             
 
 def forward():
@@ -89,14 +101,14 @@ def backup():
 
 try:    
     while True:
-        forward()    
+##        forward()    
         detect_obstacle()
-        stop()
-        time.sleep(0.5)
-        backup()
-        time.sleep(2)
-        stop()
-        time.sleep(0.5)
+##        stop()
+##        time.sleep(0.5)
+##        backup()
+##        time.sleep(2)
+##        stop()
+##        time.sleep(0.5)
 except KeyboardInterrupt:
         print "Cleaning up"
         gpio.cleanup()
