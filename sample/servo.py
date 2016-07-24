@@ -13,13 +13,16 @@ try:
     while True:
         p.ChangeDutyCycle(7.5)
         print "Neutral"
-        time.sleep(1)
+        time.sleep(0.5)
         p.ChangeDutyCycle(12.5)
         print "180"
-        time.sleep(1)
+        time.sleep(0.5)
         p.ChangeDutyCycle(2.5)
         print "0"
-        time.sleep(1)
+        time.sleep(0.5)
+        p.ChangeDutyCycle(3.75)
+        print "45"
+        time.sleep(0.5)
         
 
 except KeyboardInterrupt:
