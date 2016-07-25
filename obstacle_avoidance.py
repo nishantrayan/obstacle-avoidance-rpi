@@ -5,13 +5,9 @@ import time
 gpio.setwarnings(False)
 gpio.setmode(gpio.BOARD)
 ##setup variables for pins
-ULTRASONIC_TRIG_MID = 26
-ULTRASONIC_ECHO_MID = 29
-ULTRASONIC_TRIG_RIGHT = 31
-ULTRASONIC_ECHO_RIGHT = 32
-ULTRASONIC_TRIG_LEFT = 33
-ULTRASONIC_ECHO_LEFT = 35
-
+ULTRASONIC_TRIG = 26
+ULTRASONIC_ECHO = 29
+SERVO_GPIO = 8
 
 MOTOR_MOVE_IN1 = 15
 MOTOR_MOVE_IN2 = 13
@@ -25,42 +21,58 @@ MOTOR_DIR_IN2 = 24
 FORWARD_SPEED = 75
 BACKWARD_SPEED = 100
 OBSTACLE_DISTANCE_CM = 20
+MIN_ANGLE = 35
+MAX_ANGLE = 145
+STEP_ANGLE = 10
 for out_pin in [MOTOR_MOVE_IN1, MOTOR_MOVE_IN2, MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2, MOTOR_DIR_IN1, MOTOR_DIR_IN2, MOTOR_DIR_ENA1, MOTOR_DIR_ENA2]:
     gpio.setup(out_pin, gpio.OUT)
 
-ULTRASONIC_TRIG_PINS = [ULTRASONIC_TRIG_LEFT, ULTRASONIC_TRIG_RIGHT, ULTRASONIC_TRIG_MID]
-ULTRASONIC_ECHO_PINS = [ULTRASONIC_ECHO_LEFT, ULTRASONIC_ECHO_RIGHT, ULTRASONIC_ECHO_MID]
-for trig_pin in ULTRASONIC_TRIG_PINS:
-    gpio.setup(trig_pin, gpio.OUT)
-    gpio.output(trig_pin, False)
+gpio.setup(ULTRASONIC_TRIG, gpio.OUT)
+gpio.output(ULTRASONIC_TRIG, False)
+gpio.setup(ULTRASONIC_ECHO, gpio.IN)
 
-for echo_pin in ULTRASONIC_ECHO_PINS:    
-    gpio.setup(echo_pin, gpio.IN)
+gpio.setup(SERVO_GPIO, gpio.OUT)
+servo_pin = gpio.PWM(SERVO_GPIO, 50)
+servo_pin.start(7.5)
 
 enas = []
 for ena_pin in [MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2]:
     enas.append(gpio.PWM(ena_pin, 100))
 
-
-
 def detect_obstacle():
+    
     while True:
-        for idx, trig_pin in enumerate(ULTRASONIC_TRIG_PINS):
-            echo_pin = ULTRASONIC_ECHO_PINS[idx]
-            time.sleep(0.1)
-            gpio.output(trig_pin, True)
-            time.sleep(0.00001)
-            gpio.output(trig_pin, False)
-            while gpio.input(echo_pin) == 0:
-                pass
-            start = time.time()
-            while gpio.input(echo_pin) == 1:
-                pass
-            stop = time.time()
-            distance_cm = (stop - start) * 17000
-            if distance_cm <= OBSTACLE_DISTANCE_CM:
-                print "Object detected by", idx, "at", time.time()
+        move_sensor_servo(MIN_ANGLE)
+        time.sleep(0.05)
+        for angle in range(MIN_ANGLE, MAX_ANGLE, STEP_ANGLE):
+            move_sensor_servo(angle)
+            distance = detect_distance()
+            if distance <= OBSTACLE_DISTANCE_CM:
+                move_sensor_servo(angle)
+                print "Object detected", angle, distance
                 return
+        
+           
+def move_sensor_servo(angle):
+    pulse_time_ms = 0.5 + ((2.0 * angle) / 180)
+    duty_cycle = (pulse_time_ms / 20) * 100
+    servo_pin.ChangeDutyCycle(duty_cycle)
+    time.sleep(0.025)
+    
+def detect_distance():
+    gpio.output(ULTRASONIC_TRIG, True)
+    time.sleep(0.00001)
+    gpio.output(ULTRASONIC_TRIG, False)
+    start_scan = time.time()
+    while gpio.input(ULTRASONIC_ECHO) == 0:
+        pass
+    
+    start = time.time()
+    while gpio.input(ULTRASONIC_ECHO) == 1:
+        pass
+    stop = time.time()
+    distance_cm = (stop - start) * 17000
+    return distance_cm
             
 
 def forward():
@@ -93,7 +105,6 @@ def backup():
     gpio.output(MOTOR_MOVE_ENA2, True)
     gpio.output(MOTOR_DIR_IN1, True)
     gpio.output(MOTOR_DIR_IN2, False)
-    time.sleep(1)
     for ena_pin in enas:
         ena_pin.start(BACKWARD_SPEED)
     gpio.output(MOTOR_MOVE_IN1, True)
@@ -106,9 +117,10 @@ try:
         stop()
         time.sleep(0.5)
         backup()
-        time.sleep(2)
+        time.sleep(1)
         stop()
-        time.sleep(0.5)
+        time.sleep(0.25)
+        
 except KeyboardInterrupt:
         print "Cleaning up"
         gpio.cleanup()
