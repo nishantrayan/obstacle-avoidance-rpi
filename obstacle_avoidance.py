@@ -5,6 +5,7 @@ import time
 gpio.setwarnings(False)
 gpio.setmode(gpio.BOARD)
 ##setup variables for pins
+VIBRATION_PIN = 10
 ULTRASONIC_TRIG = 26
 ULTRASONIC_ECHO = 29
 SERVO_GPIO = 8
@@ -21,11 +22,14 @@ MOTOR_DIR_IN2 = 24
 FORWARD_SPEED = 75
 BACKWARD_SPEED = 100
 OBSTACLE_DISTANCE_CM = 20
+SPEED_CHECK_INTERVAL_SEC = 1.0
 MIN_ANGLE = 35
 MAX_ANGLE = 145
 STEP_ANGLE = 10
 for out_pin in [MOTOR_MOVE_IN1, MOTOR_MOVE_IN2, MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2, MOTOR_DIR_IN1, MOTOR_DIR_IN2, MOTOR_DIR_ENA1, MOTOR_DIR_ENA2]:
     gpio.setup(out_pin, gpio.OUT)
+
+gpio.setup(VIBRATION_PIN, gpio.IN, pull_up_down=pgio.PUD_DOWN)
 
 gpio.setup(ULTRASONIC_TRIG, gpio.OUT)
 gpio.output(ULTRASONIC_TRIG, False)
@@ -39,19 +43,30 @@ enas = []
 for ena_pin in [MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2]:
     enas.append(gpio.PWM(ena_pin, 100))
 
-def detect_obstacle():
-    
-    while True:
-        move_sensor_servo(MIN_ANGLE)
-        time.sleep(0.05)
-        for angle in range(MIN_ANGLE, MAX_ANGLE, STEP_ANGLE):
+last_vibration_time = time.time()
+last_speed_check_time = time.time()
+current_speed = 0
+def moved(vibration_pin):
+    current_time = time.time()
+    current_speed = 100.0 / (current_time - last_vibration_time)
+    last_vibration_time = current_time
+
+def stuck():
+    speed_check = (time.time() - last_speed_check_time) > SPEED_CHECK_INTERVAL_SEC
+    return speed_check and current_speed == 0
+
+gpio.add_event_detect(VIBRATION_PIN, gpio.RISING, callback=moved, bouncetime=1)
+
+def obstacle_detected():
+    for angle in range(MIN_ANGLE, MAX_ANGLE, STEP_ANGLE):
+        move_sensor_servo(angle)
+        time.sleep(0.10)
+        distance = detect_distance()
+        if distance <= OBSTACLE_DISTANCE_CM:
             move_sensor_servo(angle)
-            distance = detect_distance()
-            if distance <= OBSTACLE_DISTANCE_CM:
-                move_sensor_servo(angle)
-                print "Object detected", angle, distance
-                return
-        
+            print "Object detected", angle, distance
+            return True
+    return False
            
 def move_sensor_servo(angle):
     pulse_time_ms = 0.5 + ((2.0 * angle) / 180)
@@ -110,16 +125,17 @@ def backup():
     gpio.output(MOTOR_MOVE_IN1, True)
     gpio.output(MOTOR_MOVE_IN2, False)
 
-try:    
+try:
+    forward()
     while True:
-        forward()    
-        detect_obstacle()
-        stop()
-        time.sleep(0.5)
-        backup()
-        time.sleep(1)
-        stop()
-        time.sleep(0.25)
+        if stuck() or obstacle_detected():
+            stop()
+            time.sleep(0.25)
+            backup()
+            time.sleep(1)
+            stop()
+            time.sleep(0.25)
+            forward()
         
 except KeyboardInterrupt:
         print "Cleaning up"
