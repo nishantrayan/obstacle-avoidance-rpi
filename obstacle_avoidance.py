@@ -19,17 +19,17 @@ MOTOR_DIR_ENA2 = 18
 MOTOR_DIR_IN1 = 22
 MOTOR_DIR_IN2 = 24
 
-FORWARD_SPEED = 75
+FORWARD_SPEED = 85
 BACKWARD_SPEED = 100
 OBSTACLE_DISTANCE_CM = 20
-SPEED_CHECK_INTERVAL_SEC = 1.0
+SPEED_CHECK_INTERVAL_SEC = 2.0
 MIN_ANGLE = 35
 MAX_ANGLE = 145
 STEP_ANGLE = 10
 for out_pin in [MOTOR_MOVE_IN1, MOTOR_MOVE_IN2, MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2, MOTOR_DIR_IN1, MOTOR_DIR_IN2, MOTOR_DIR_ENA1, MOTOR_DIR_ENA2]:
     gpio.setup(out_pin, gpio.OUT)
 
-gpio.setup(VIBRATION_PIN, gpio.IN, pull_up_down=pgio.PUD_DOWN)
+gpio.setup(VIBRATION_PIN, gpio.IN, pull_up_down=gpio.PUD_DOWN)
 
 gpio.setup(ULTRASONIC_TRIG, gpio.OUT)
 gpio.output(ULTRASONIC_TRIG, False)
@@ -43,24 +43,30 @@ enas = []
 for ena_pin in [MOTOR_MOVE_ENA1, MOTOR_MOVE_ENA2]:
     enas.append(gpio.PWM(ena_pin, 100))
 
-last_vibration_time = time.time()
-last_speed_check_time = time.time()
-current_speed = 0
+moved = False
+move_check_time = time.time()
 def moved(vibration_pin):
-    current_time = time.time()
-    current_speed = 100.0 / (current_time - last_vibration_time)
-    last_vibration_time = current_time
-
+    global moved
+    moved = True
+   
 def stuck():
-    speed_check = (time.time() - last_speed_check_time) > SPEED_CHECK_INTERVAL_SEC
-    return speed_check and current_speed == 0
+    global moved
+    global move_check_time
+    has_moved = moved
+    current_time = time.time()
+    if(current_time - move_check_time) > SPEED_CHECK_INTERVAL_SEC:
+        if not(has_moved):
+            print "Stuck", current_time
+        moved = False
+        move_check_time = current_time
+        return not(has_moved)
+    return False
 
 gpio.add_event_detect(VIBRATION_PIN, gpio.RISING, callback=moved, bouncetime=1)
 
 def obstacle_detected():
     for angle in range(MIN_ANGLE, MAX_ANGLE, STEP_ANGLE):
         move_sensor_servo(angle)
-        time.sleep(0.10)
         distance = detect_distance()
         if distance <= OBSTACLE_DISTANCE_CM:
             move_sensor_servo(angle)
@@ -72,7 +78,7 @@ def move_sensor_servo(angle):
     pulse_time_ms = 0.5 + ((2.0 * angle) / 180)
     duty_cycle = (pulse_time_ms / 20) * 100
     servo_pin.ChangeDutyCycle(duty_cycle)
-    time.sleep(0.025)
+    time.sleep(0.050)
     
 def detect_distance():
     gpio.output(ULTRASONIC_TRIG, True)
