@@ -126,6 +126,7 @@ def backup():
     gpio.output(MOTOR_MOVE_ENA2, True)
     gpio.output(MOTOR_DIR_IN1, True)
     gpio.output(MOTOR_DIR_IN2, False)
+    time.sleep(0.25)
     for ena_pin in enas:
         ena_pin.start(BACKWARD_SPEED)
     gpio.output(MOTOR_MOVE_IN1, True)
