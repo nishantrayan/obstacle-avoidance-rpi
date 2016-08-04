@@ -8,7 +8,7 @@ gpio.setmode(gpio.BOARD)
 VIBRATION_PIN = 10
 ULTRASONIC_TRIG = 26
 ULTRASONIC_ECHO = 29
-SERVO_GPIO = 8
+SERVO_GPIO = 12
 
 MOTOR_MOVE_IN1 = 15
 MOTOR_MOVE_IN2 = 13
@@ -78,7 +78,7 @@ def move_sensor_servo(angle):
     pulse_time_ms = 0.5 + ((2.0 * angle) / 180)
     duty_cycle = (pulse_time_ms / 20) * 100
     servo_pin.ChangeDutyCycle(duty_cycle)
-    time.sleep(0.050)
+    time.sleep(0.075)
     
 def detect_distance():
     gpio.output(ULTRASONIC_TRIG, True)
