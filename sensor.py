@@ -1,11 +1,16 @@
 import RPi.GPIO as gpio
+from collections import OrderedDict
 import time
 
-DEFAULT_SENSE_ANGLES = {}
+gpio.setwarnings(False)
+gpio.setmode(gpio.BOARD)
+
+
+DEFAULT_SENSE_ANGLES = OrderedDict()
 DEFAULT_SENSE_DISTANCE = 10  # in CM
 MIN_ANGLE = 0
 MAX_ANGLE = 180
-STEP_ANGLE = 1
+STEP_ANGLE = 20
 
 ULTRASONIC_TRIG = 26
 ULTRASONIC_ECHO = 29
