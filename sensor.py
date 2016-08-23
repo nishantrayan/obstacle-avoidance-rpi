@@ -43,6 +43,7 @@ def move_sensor(angle):
     time.sleep(0.075)
 
 def sense_angles(angle_distances=DEFAULT_SENSE_ANGLES):
+    print "Sensing obstacle at all angles"
     while True:
         for angle, sense_distance in angle_distances.iteritems():
             move_sensor(angle)
